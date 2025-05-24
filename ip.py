@@ -19,7 +19,7 @@ def image_to_ascii(file_path, width=80):
     return "\n".join(ascii_image)
 
 def show_banner():
-    ascii_img = image_to_ascii("fsociety.png", width=80)
+    ascii_img = image_to_ascii("fsociety.jpg", width=80)
     print(colored(ascii_img, "magenta"))
     print(colored("\n== IP Информационный Сканер ==", "red", attrs=["bold"]))
 
