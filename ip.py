@@ -1,10 +1,26 @@
-import ascii-magic
+from PIL import Image
 from termcolor import colored
-import requests, socket, os
+import requests, socket
+
+def image_to_ascii(fsociety.png, width=80):
+    # Открываем изображение и уменьшаем до нужной ширины
+    img = Image.open(file_path)
+    aspect_ratio = img.height / img.width
+    height = int(aspect_ratio * width * 0.55)  # 0.55 для пропорций символов
+    img = img.resize((width, height))
+    img = img.convert("L")  # Конвертируем в оттенки серого
+
+    pixels = img.getdata()
+    chars = ["@", "#", "S", "%", "?", "*", "+", ";", ":", ",", "."]  # от темного к светлому
+    new_pixels = [chars[pixel//25] for pixel in pixels]
+    new_pixels = ''.join(new_pixels)
+
+    ascii_image = [new_pixels[index: index + width] for index in range(0, len(new_pixels), width)]
+    return "\n".join(ascii_image)
 
 def show_banner():
-    output = ascii-magic.from_image_file("fsociety.png", columns=80, char="#")
-    ascii_magic.to_terminal(output)
+    ascii_img = image_to_ascii("fsociety.png", width=80)
+    print(colored(ascii_img, "magenta"))
     print(colored("\n== IP Информационный Сканер ==", "red", attrs=["bold"]))
 
 def get_ip_info(ip):
