@@ -5,7 +5,7 @@ import requests, socket, os
 def show_banner():
     output = ascii_magic.from_image_file("fsociety.png", columns=80, char="#")
     ascii_magic.to_terminal(output)
-    print(colored("== IP Информационный Сканер (by YOU) ==", "red", attrs=["bold"]))
+    print(colored("\n== IP Информационный Сканер ==", "red", attrs=["bold"]))
 
 def get_ip_info(ip):
     info = {}
