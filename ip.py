@@ -11,7 +11,7 @@ def image_to_ascii(file_path, width=80):
     img = img.convert("L")  # Конвертируем в оттенки серого
 
     pixels = img.getdata()
-    chars = ["@", "#", "S", "%", "?", "*", "+", ";", ":", ",", "."]  # от темного к светлому
+    chars = ["@", "#", "%", "."]  # от темного к светлому
     new_pixels = [chars[pixel//25] for pixel in pixels]
     new_pixels = ''.join(new_pixels)
 
