@@ -12,7 +12,7 @@ def image_to_ascii(file_path, width=80):
 
     pixels = img.getdata()
     chars = ["@", "#", "%", "."]  # от темного к светлому
-    new_pixels = [chars[pixel//25] for pixel in pixels]
+    new_pixels = [chars[pixel * len(chars) // 256] for pixel in pixels]
     new_pixels = ''.join(new_pixels)
 
     ascii_image = [new_pixels[index: index + width] for index in range(0, len(new_pixels), width)]
