@@ -1,9 +1,9 @@
-import ascii_magic
+import ascii-magic
 from termcolor import colored
 import requests, socket, os
 
 def show_banner():
-    output = ascii_magic.from_image_file("fsociety.png", columns=80, char="#")
+    output = ascii-magic.from_image_file("fsociety.png", columns=80, char="#")
     ascii_magic.to_terminal(output)
     print(colored("\n== IP Информационный Сканер ==", "red", attrs=["bold"]))
 
