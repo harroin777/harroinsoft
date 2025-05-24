@@ -3,7 +3,7 @@ import itertools
 import string
 from concurrent.futures import ThreadPoolExecutor
 
-host = "192.168.1.10"  # ЗАМЕНИ на IP цели
+host = "192.168.1.1"  # ЗАМЕНИ на IP цели
 port = 23
 
 logins = ["admin", "root", "user", "guest"]
