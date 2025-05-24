@@ -2,7 +2,7 @@ from PIL import Image
 from termcolor import colored
 import requests, socket
 
-def image_to_ascii(fsociety.png, width=80):
+def image_to_ascii(file_path, width=80):
     # Открываем изображение и уменьшаем до нужной ширины
     img = Image.open(file_path)
     aspect_ratio = img.height / img.width
