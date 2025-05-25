@@ -8,7 +8,7 @@ from queue import Queue
 # Настройки
 host = "192.168.1.1"  # Замените на IP вашей цели
 port = 21
-max_threads = 20
+max_threads = 10
 min_len = 1
 max_len = 4
 charset = string.ascii_lowercase + string.digits
